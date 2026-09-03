@@ -221,3 +221,20 @@ def centripetal_force(
     omega,
 ):
     return mass * omega**2 * radius
+
+if __name__ == "__main__":
+
+    simulation = simulate_circular_motion(
+        radius=20,
+        omega=2,
+        total_time=5,
+        dt=0.01,
+    )
+
+    print("Final position:")
+    print(simulation["position"][-1])
+
+    print()
+
+    print("Final velocity:")
+    print(simulation["velocity"][-1])
