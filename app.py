@@ -42,11 +42,12 @@ st.sidebar.info(
 
 # ============================================================
 
-if mode == "Circular Motion":
+if 
+    mode == "Circular Motion":
 
-st.header("🔵 Basic Circular Motion")
+    st.header("🔵 Basic Circular Motion")
 
-col1, col2, col3 = st.columns(3)
+    col1, col2, col3 = st.columns(3)
 
 with col1:
     radius = st.slider(
