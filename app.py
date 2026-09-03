@@ -42,13 +42,19 @@ st.sidebar.info(
 
 # ============================================================
 
-if
-    mode == "Circular Motion":
+    if (
+        run
+        or "circular_simulation" not in st.session_state
+        or st.session_state.get("circular_parameters") != simulation_parameters
+    ):
 
-
-    st.header("🔵 Basic Circular Motion")
-
-    col1, col2, col3 = st.columns(3)
+        times, positions, velocities = simulate_circular_motion(
+            radius=radius,
+            omega=omega,
+            total_time=simulation_time,
+            dt=0.01,
+        )
+          
 
 with col1:
     radius = st.slider(
