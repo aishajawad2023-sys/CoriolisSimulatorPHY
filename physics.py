@@ -1,111 +1,223 @@
 import numpy as np
 
 
-def circular_motion(radius, omega, time):
+def acceleration_circular(position, omega):
     """
-    Calculate position, velocity and centripetal acceleration
-    for an object moving in a horizontal circle.
+    Centripetal acceleration for an object constrained
+    to circular motion.
+
+    a = -omega^2 * r
     """
 
-    theta = omega * time
+    return -omega**2 * position
 
-    x = radius * np.cos(theta)
-    y = radius * np.sin(theta)
 
-    vx = -radius * omega * np.sin(theta)
-    vy = radius * omega * np.cos(theta)
+def simulate_particle(
+    initial_position,
+    initial_velocity,
+    acceleration_function,
+    total_time=10.0,
+    dt=0.01,
+):
+    """
+    Generic numerical particle simulator.
 
-    ax = -radius * omega**2 * np.cos(theta)
-    ay = -radius * omega**2 * np.sin(theta)
+    Uses simple Euler integration.
 
-    speed = abs(radius * omega)
-    acceleration = radius * omega**2
+    Parameters
+    ----------
+    initial_position : array-like
+        Starting position [x, y]
+
+    initial_velocity : array-like
+        Starting velocity [vx, vy]
+
+    acceleration_function : function
+        Function receiving (position, velocity, time)
+        and returning acceleration [ax, ay]
+
+    total_time : float
+        Simulation duration in seconds
+
+    dt : float
+        Simulation timestep
+    """
+
+    steps = int(total_time / dt) + 1
+
+    times = np.linspace(
+        0,
+        total_time,
+        steps,
+    )
+
+    positions = np.zeros(
+        (steps, 2)
+    )
+
+    velocities = np.zeros(
+        (steps, 2)
+    )
+
+    accelerations = np.zeros(
+        (steps, 2)
+    )
+
+    positions[0] = np.asarray(
+        initial_position,
+        dtype=float,
+    )
+
+    velocities[0] = np.asarray(
+        initial_velocity,
+        dtype=float,
+    )
+
+    for i in range(steps - 1):
+
+        t = times[i]
+
+        acceleration = acceleration_function(
+            positions[i],
+            velocities[i],
+            t,
+        )
+
+        accelerations[i] = acceleration
+
+        velocities[i + 1] = (
+            velocities[i]
+            + acceleration * dt
+        )
+
+        positions[i + 1] = (
+            positions[i]
+            + velocities[i + 1] * dt
+        )
+
+    accelerations[-1] = acceleration_function(
+        positions[-1],
+        velocities[-1],
+        times[-1],
+    )
 
     return {
-        "x": x,
-        "y": y,
-        "vx": vx,
-        "vy": vy,
-        "ax": ax,
-        "ay": ay,
-        "speed": speed,
-        "acceleration": acceleration,
+        "time": times,
+        "position": positions,
+        "velocity": velocities,
+        "acceleration": accelerations,
     }
 
 
-def vertical_circle(radius, initial_speed, g=9.81, num_points=500):
+def simulate_circular_motion(
+    radius=20.0,
+    omega=2.0,
+    total_time=10.0,
+    dt=0.01,
+):
     """
-    Calculate a vertical circular trajectory using conservation of energy.
+    Numerically simulate circular motion.
 
-    The object starts at the bottom of the circle.
-    """
+    The object starts at:
+        x = radius
+        y = 0
 
-    theta = np.linspace(0, 2 * np.pi, num_points)
-
-    height = radius * (1 - np.cos(theta))
-
-    velocity_squared = initial_speed**2 - 2 * g * height
-
-    velocity_squared = np.maximum(velocity_squared, 0)
-
-    speed = np.sqrt(velocity_squared)
-
-    x = radius * np.sin(theta)
-    y = -radius * np.cos(theta)
-
-    return {
-        "theta": theta,
-        "x": x,
-        "y": y,
-        "speed": speed,
-        "height": height,
-    }
-
-
-def coriolis_acceleration(omega_vector, velocity_vector):
-    """
-    Calculate Coriolis acceleration:
-
-        a_c = -2 * Omega x v
+    and has initial tangential velocity.
     """
 
-    omega_vector = np.asarray(omega_vector, dtype=float)
-    velocity_vector = np.asarray(velocity_vector, dtype=float)
+    initial_position = np.array(
+        [radius, 0.0]
+    )
 
-    return -2 * np.cross(omega_vector, velocity_vector)
+    initial_velocity = np.array(
+        [0.0, radius * omega]
+    )
+
+    def acceleration(
+        position,
+        velocity,
+        time,
+    ):
+        return acceleration_circular(
+            position,
+            omega,
+        )
+
+    return simulate_particle(
+        initial_position,
+        initial_velocity,
+        acceleration,
+        total_time,
+        dt,
+    )
 
 
-def coriolis_parameter(latitude_degrees, earth_omega=7.2921159e-5):
+def coriolis_acceleration(
+    omega_vector,
+    velocity_vector,
+):
     """
-    Calculate the Coriolis parameter:
+    Coriolis acceleration:
 
-        f = 2 * Omega * sin(latitude)
+        a_c = -2 Ω × v
     """
 
-    latitude_radians = np.radians(latitude_degrees)
+    omega_vector = np.asarray(
+        omega_vector,
+        dtype=float,
+    )
 
-    return 2 * earth_omega * np.sin(latitude_radians)
+    velocity_vector = np.asarray(
+        velocity_vector,
+        dtype=float,
+    )
+
+    return -2 * np.cross(
+        omega_vector,
+        velocity_vector,
+    )
+
+
+def coriolis_parameter(
+    latitude_degrees,
+    earth_omega=7.2921159e-5,
+):
+    """
+    Coriolis parameter:
+
+        f = 2 Ω sin(latitude)
+    """
+
+    latitude_radians = np.radians(
+        latitude_degrees
+    )
+
+    return (
+        2
+        * earth_omega
+        * np.sin(latitude_radians)
+    )
 
 
 def earth_rotation_rate():
     """
-    Approximate angular rotation rate of Earth in rad/s.
+    Earth's approximate sidereal
+    rotation rate in rad/s.
     """
 
     return 2 * np.pi / 86164
 
 
-def centripetal_acceleration(radius, omega):
-    """
-    a = omega^2 * r
-    """
-
+def centripetal_acceleration(
+    radius,
+    omega,
+):
     return omega**2 * radius
 
 
-def centripetal_force(mass, radius, omega):
-    """
-    F = m * omega^2 * r
-    """
-
+def centripetal_force(
+    mass,
+    radius,
+    omega,
+):
     return mass * omega**2 * radius
