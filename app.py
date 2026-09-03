@@ -272,7 +272,7 @@ st.markdown(
     - Centripetal acceleration: `{omega**2 * radius:.2f} m/s²`
     """
 )
-```
+
 
 # ============================================================
 
