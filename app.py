@@ -42,7 +42,7 @@ st.sidebar.info(
 
 # ============================================================
 
-    if (
+if (
         run
         or "circular_simulation" not in st.session_state
         or st.session_state.get("circular_parameters") != simulation_parameters
