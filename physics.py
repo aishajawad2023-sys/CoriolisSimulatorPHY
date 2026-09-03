@@ -1,165 +1,156 @@
 import numpy as np
 
 
-def acceleration_circular(position, omega):
-    """
-    Centripetal acceleration for an object constrained
-    to circular motion.
+# ============================================================
+# CIRCULAR MOTION
+# ============================================================
 
-    a = -omega^2 * r
-    """
-
-    return -omega**2 * position
-
-
-def simulate_particle(
-    initial_position,
-    initial_velocity,
-    acceleration_function,
-    total_time=10.0,
+def simulate_circular_motion(
+    radius,
+    omega,
+    total_time,
     dt=0.01,
 ):
     """
-    Generic numerical particle simulator.
-
-    Uses simple Euler integration.
+    Simulate uniform circular motion.
 
     Parameters
     ----------
-    initial_position : array-like
-        Starting position [x, y]
+    radius : float
+        Radius of the circular path in meters.
 
-    initial_velocity : array-like
-        Starting velocity [vx, vy]
-
-    acceleration_function : function
-        Function receiving (position, velocity, time)
-        and returning acceleration [ax, ay]
+    omega : float
+        Angular velocity in radians per second.
 
     total_time : float
-        Simulation duration in seconds
+        Total simulation time in seconds.
 
     dt : float
-        Simulation timestep
+        Time step in seconds.
+
+    Returns
+    -------
+    times : numpy.ndarray
+        Simulation time values.
+
+    positions : numpy.ndarray
+        x and y positions at each time.
+
+    velocities : numpy.ndarray
+        x and y velocities at each time.
     """
 
-    steps = int(total_time / dt) + 1
-
-    times = np.linspace(
-        0,
-        total_time,
-        steps,
-    )
-
-    positions = np.zeros(
-        (steps, 2)
-    )
-
-    velocities = np.zeros(
-        (steps, 2)
-    )
-
-    accelerations = np.zeros(
-        (steps, 2)
-    )
-
-    positions[0] = np.asarray(
-        initial_position,
-        dtype=float,
-    )
-
-    velocities[0] = np.asarray(
-        initial_velocity,
-        dtype=float,
-    )
-
-    for i in range(steps - 1):
-
-        t = times[i]
-
-        acceleration = acceleration_function(
-            positions[i],
-            velocities[i],
-            t,
-        )
-
-        accelerations[i] = acceleration
-
-        velocities[i + 1] = (
-            velocities[i]
-            + acceleration * dt
-        )
-
-        positions[i + 1] = (
-            positions[i]
-            + velocities[i + 1] * dt
-        )
-
-    accelerations[-1] = acceleration_function(
-        positions[-1],
-        velocities[-1],
-        times[-1],
-    )
-
-    return {
-        "time": times,
-        "position": positions,
-        "velocity": velocities,
-        "acceleration": accelerations,
-    }
-
-
-def simulate_circular_motion(
-    radius=20.0,
-    omega=2.0,
-    total_time=10.0,
-    dt=0.01,
-):
-    """
-    Numerically simulate circular motion.
-
-    The object starts at:
-        x = radius
-        y = 0
-
-    and has initial tangential velocity.
-    """
-
-    initial_position = np.array(
-        [radius, 0.0]
-    )
-
-    initial_velocity = np.array(
-        [0.0, radius * omega]
-    )
-
-    def acceleration(
-        position,
-        velocity,
-        time,
-    ):
-        return acceleration_circular(
-            position,
-            omega,
-        )
-
-    return simulate_particle(
-        initial_position,
-        initial_velocity,
-        acceleration,
-        total_time,
+    times = np.arange(
+        0.0,
+        total_time + dt,
         dt,
     )
 
+    # Position:
+    # x = r cos(ωt)
+    # y = r sin(ωt)
+
+    x = radius * np.cos(omega * times)
+    y = radius * np.sin(omega * times)
+
+    positions = np.column_stack(
+        (x, y)
+    )
+
+    # Velocity:
+    # vx = -rω sin(ωt)
+    # vy =  rω cos(ωt)
+
+    vx = -radius * omega * np.sin(omega * times)
+    vy = radius * omega * np.cos(omega * times)
+
+    velocities = np.column_stack(
+        (vx, vy)
+    )
+
+    return times, positions, velocities
+
+
+# ============================================================
+# VERTICAL CIRCLE
+# ============================================================
+
+def vertical_circle(
+    radius,
+    gravity,
+    num_points=361,
+):
+    """
+    Calculate a vertical circular path.
+
+    Returns the angle, x position, y position,
+    and speed required for the minimum-contact
+    vertical-circle condition.
+    """
+
+    theta = np.linspace(
+        0.0,
+        2.0 * np.pi,
+        num_points,
+    )
+
+    x = radius * np.cos(theta)
+    y = radius * np.sin(theta)
+
+    # Minimum-contact condition at the top:
+    #
+    # v_top^2 = g r
+    #
+    # Using conservation of energy:
+    #
+    # v^2 = v_top^2 + 2gr(1 - sin(theta))
+
+    v_top_squared = gravity * radius
+
+    velocity_squared = (
+        v_top_squared
+        + 2.0 * gravity * radius * (1.0 - np.sin(theta))
+    )
+
+    velocity_squared = np.maximum(
+        velocity_squared,
+        0.0,
+    )
+
+    velocity = np.sqrt(
+        velocity_squared
+    )
+
+    return theta, x, y, velocity
+
+
+# ============================================================
+# CORIOLIS ACCELERATION
+# ============================================================
 
 def coriolis_acceleration(
     omega_vector,
-    velocity_vector,
+    velocity,
 ):
     """
-    Coriolis acceleration:
+    Calculate Coriolis acceleration.
 
-        a_c = -2 Ω × v
+    Formula:
+
+        a_c = -2 (Ω × v)
+
+    Parameters
+    ----------
+    omega_vector : array-like
+        Rotation vector Ω.
+
+    velocity : array-like
+        Velocity vector v.
+
+    Returns
+    -------
+    numpy.ndarray
+        Coriolis acceleration vector.
     """
 
     omega_vector = np.asarray(
@@ -167,74 +158,79 @@ def coriolis_acceleration(
         dtype=float,
     )
 
-    velocity_vector = np.asarray(
-        velocity_vector,
+    velocity = np.asarray(
+        velocity,
         dtype=float,
     )
 
-    return -2 * np.cross(
+    return -2.0 * np.cross(
         omega_vector,
-        velocity_vector,
+        velocity,
     )
 
 
+# ============================================================
+# CORIOLIS PARAMETER
+# ============================================================
+
 def coriolis_parameter(
     latitude_degrees,
-    earth_omega=7.2921159e-5,
+    earth_omega=None,
 ):
     """
-    Coriolis parameter:
+    Calculate the Coriolis parameter.
+
+    Formula:
 
         f = 2 Ω sin(latitude)
+
+    Parameters
+    ----------
+    latitude_degrees : float
+        Latitude in degrees.
+
+    earth_omega : float, optional
+        Earth's angular rotation rate.
+
+    Returns
+    -------
+    float
+        Coriolis parameter in s^-1.
     """
+
+    if earth_omega is None:
+        earth_omega = earth_rotation_rate()
 
     latitude_radians = np.radians(
         latitude_degrees
     )
 
     return (
-        2
+        2.0
         * earth_omega
         * np.sin(latitude_radians)
     )
 
 
+# ============================================================
+# EARTH ROTATION RATE
+# ============================================================
+
 def earth_rotation_rate():
     """
-    Earth's approximate sidereal
-    rotation rate in rad/s.
+    Return Earth's angular rotation rate.
+
+    One sidereal rotation is approximately
+    23 hours, 56 minutes, 4 seconds.
     """
 
-    return 2 * np.pi / 86164
-
-
-def centripetal_acceleration(
-    radius,
-    omega,
-):
-    return omega**2 * radius
-
-
-def centripetal_force(
-    mass,
-    radius,
-    omega,
-):
-    return mass * omega**2 * radius
-
-if __name__ == "__main__":
-
-    simulation = simulate_circular_motion(
-        radius=20,
-        omega=2,
-        total_time=5,
-        dt=0.01,
+    sidereal_day = (
+        23.0 * 3600.0
+        + 56.0 * 60.0
+        + 4.0
     )
 
-    print("Final position:")
-    print(simulation["position"][-1])
-
-    print()
-
-    print("Final velocity:")
-    print(simulation["velocity"][-1])
+    return (
+        2.0 * np.pi
+        / sidereal_day
+    )
